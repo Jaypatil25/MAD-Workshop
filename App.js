@@ -1,6 +1,14 @@
 import { StatusBar } from "expo-status-bar";
-import { useState, useEffect } from "react";
-import { View, StyleSheet, Dimensions, Text } from "react-native";
+import { useState, useEffect, use } from "react";
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Text,
+  TouchableWithoutFeedback,
+  ImageComponent,
+} from "react-native";
+import { Accelerometer } from "expo-sensors";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const PLAYER_WIDTH = 50;
@@ -14,12 +22,53 @@ const BLOCK_HEIGHT = 40;
 
 export default function App() {
   const [playerX, setPlayerX] = useState((screenWidth - PLAYER_WIDTH) / 2);
+  const [bullet, setBullet] = useState([]);
+
+  useEffect(() => {
+    Accelerometer.setUpdateInterval(100);
+
+    const subsription = Accelerometer.addListener(({ x }) => {
+      console.log("Value of X :", x);
+      const move = x * 30;
+      const allowedValue = Math.max(
+        0,
+        Math.min(move, screenWidth - PLAYER_WIDTH)
+      );
+      setPlayerX(allowedValue);
+    });
+
+    return () => subsription.remove();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBullet((prev) => prev.map((b) => ({ ...b, y: b.y + 10 })));
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleBullet = () => {
+    const bullet = {
+      id: Date.now(),
+      x: playerX + (PLAYER_WIDTH - PLAYER_WIDTH) / 2,
+      y: PLAYER_HEIGHT,
+    };
+
+    setBullet((prev) => [...prev, bullet]);
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.player, { left: playerX }]} />
-      <Text style={styles.instruction}>Tilt your phone to move</Text>
-    </View>
+    <TouchableWithoutFeedback onPress={handleBullet}>
+      <View style={styles.container}>w d
+        {bullet.map((b) => {
+          <View style={[styles.bullet, { left: b.x, bottom: b.y }]} />;
+        })}
+
+        <View style={[styles.player, { left: playerX }]} />
+        <Text style={styles.instruction}>Tilt your phone to move</Text>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
